@@ -1,0 +1,15 @@
+sentinelhub
+matplotlib
+numpy
+pandas
+requests
+scikit-learn
+scipy
+tqdm
+cdsapi
+xarray
+netCDF4
+cdsapi
+ecmwf-datastores-client
+torchgeo
+dask
