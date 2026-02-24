@@ -1,0 +1,13 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Train Flood",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "run.py",
+            "args": ["-p", "train", "-c", "config/flood_satellite.json"],
+            "console": "integratedTerminal"
+        }
+    ]
+}

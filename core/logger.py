@@ -144,25 +144,22 @@ class VisualWriter():
 
 
 class LogTracker:
-    """
-    record training numerical indicators.
-    """
     def __init__(self, *keys, phase='train'):
         self.phase = phase
-        self._data = pd.DataFrame(index=keys, columns=['total', 'counts', 'average'])
-        self.reset()
+        self._totals = {k: 0.0 for k in keys}
+        self._counts = {k: 0 for k in keys}
 
     def reset(self):
-        for col in self._data.columns:
-            self._data[col].values[:] = 0
+        for k in self._totals:
+            self._totals[k] = 0.0
+            self._counts[k] = 0
 
     def update(self, key, value, n=1):
-        self._data.total[key] += value * n
-        self._data.counts[key] += n
-        self._data.average[key] = self._data.total[key] / self._data.counts[key]
-
-    def avg(self, key):
-        return self._data.average[key]
+        self._totals[key] += value * n
+        self._counts[key] += n
 
     def result(self):
-        return {'{}/{}'.format(self.phase, k):v for k, v in dict(self._data.average).items()}
+        return {
+            '{}/{}'.format(self.phase, k): self._totals[k] / max(self._counts[k], 1)
+            for k in self._totals
+        }

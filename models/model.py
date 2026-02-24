@@ -61,6 +61,7 @@ class Palette(BaseModel):
         self.cond_image = self.set_device(data.get('cond_image'))
         self.gt_image = self.set_device(data.get('gt_image'))
         self.mask = self.set_device(data.get('mask'))
+        self.cloud_mask = self.set_device(data.get('cloud_mask'))   
         self.mask_image = data.get('mask_image')
         self.path = data['path']
         self.batch_size = len(data['path'])
@@ -107,7 +108,7 @@ class Palette(BaseModel):
         for train_data in tqdm.tqdm(self.phase_loader):
             self.set_input(train_data)
             self.optG.zero_grad()
-            loss = self.netG(self.gt_image, self.cond_image, mask=self.mask)
+            loss = self.netG(self.gt_image, self.cond_image, mask=self.mask, cloud_mask=self.cloud_mask)
             loss.backward()
             self.optG.step()
 
@@ -152,7 +153,7 @@ class Palette(BaseModel):
 
                 for met in self.metrics:
                     key = met.__name__
-                    value = met(self.gt_image, self.output)
+                    value = met(self.gt_image, self.output).item()
                     self.val_metrics.update(key, value)
                     self.writer.add_scalar(key, value)
                 for key, value in self.get_current_visuals(phase='val').items():
@@ -184,7 +185,7 @@ class Palette(BaseModel):
                 self.writer.set_iter(self.epoch, self.iter, phase='test')
                 for met in self.metrics:
                     key = met.__name__
-                    value = met(self.gt_image, self.output)
+                    value = met(self.gt_image, self.output).item()
                     self.test_metrics.update(key, value)
                     self.writer.add_scalar(key, value)
                 for key, value in self.get_current_visuals(phase='test').items():

@@ -102,8 +102,17 @@ class Network(BaseNetwork):
                 ret_arr = torch.cat([ret_arr, y_t], dim=0)
         return y_t, ret_arr
 
-    def forward(self, y_0, y_cond=None, mask=None, noise=None):
-        # sampling from p(gammas)
+    def forward(self, y_0, y_cond=None, mask=None, cloud_mask=None, noise=None):
+        """
+        Training forward pass with cloud masking.
+        
+        Args:
+            y_0:         (B, 3, H, W) ground truth RGB
+            y_cond:      (B, 3, H, W) condition RGB
+            mask:        inpainting mask (not used for flood task)
+            cloud_mask:  (B, 1, H, W) clear pixel mask, 1=clear 0=cloud
+            noise:       optional pre-generated noise
+        """
         b, *_ = y_0.shape
         t = torch.randint(1, self.num_timesteps, (b,), device=y_0.device).long()
         gamma_t1 = extract(self.gammas, t-1, x_shape=(1, 1))
@@ -116,13 +125,24 @@ class Network(BaseNetwork):
             y_0=y_0, sample_gammas=sample_gammas.view(-1, 1, 1, 1), noise=noise)
 
         if mask is not None:
-            noise_hat = self.denoise_fn(torch.cat([y_cond, y_noisy*mask+(1.-mask)*y_0], dim=1), sample_gammas)
+            # Original inpainting path (unchanged)
+            noise_hat = self.denoise_fn(
+                torch.cat([y_cond, y_noisy*mask+(1.-mask)*y_0], dim=1), sample_gammas)
             loss = self.loss_fn(mask*noise, mask*noise_hat)
         else:
-            noise_hat = self.denoise_fn(torch.cat([y_cond, y_noisy], dim=1), sample_gammas)
-            loss = self.loss_fn(noise, noise_hat)
+            noise_hat = self.denoise_fn(
+                torch.cat([y_cond, y_noisy], dim=1), sample_gammas)
+            
+            if cloud_mask is not None:
+                # Cloud-masked loss: only penalize clear pixels
+                # cloud_mask is (B, 1, H, W), broadcasts over 3 RGB channels
+                diff = self.loss_fn(cloud_mask * noise, cloud_mask * noise_hat)
+                # Normalize by fraction of valid pixels to keep loss scale stable
+                valid_ratio = cloud_mask.mean().clamp(min=0.01)
+                loss = diff / valid_ratio
+            else:
+                loss = self.loss_fn(noise, noise_hat)
         return loss
-
 
 # gaussian diffusion trainer class
 def exists(x):

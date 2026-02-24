@@ -1,1 +1,6 @@
-data/
+datasets/
+checkpoints/
+__pycache__/
+experiments/
+dataset/
+selfnote.txt

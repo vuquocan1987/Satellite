@@ -13,3 +13,6 @@ cdsapi
 ecmwf-datastores-client
 torchgeo
 dask
+opencv-python
+tensorboard
+tensorboardX
